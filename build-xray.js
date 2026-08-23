@@ -4,12 +4,12 @@ const path = require('path');
 const https = require('https');
 const AdmZip = require('adm-zip');
 
-const version = process.env.XRAY_VERSION || '25.12.8';
+const version = '25.12.8';
 if (process.platform !== 'linux' || !['x64', 'arm64'].includes(process.arch)) {
   console.log(`Skipping Xray download for ${process.platform}/${process.arch}`); process.exit(0);
 }
 const asset = process.arch === 'arm64' ? 'Xray-linux-arm64-v8a.zip' : 'Xray-linux-64.zip';
-const destination = path.join(__dirname, 'bin', 'xray');
+const destination = process.env.XRAY_BIN || path.join(__dirname, 'bin', 'xray');
 const archive = path.join('/tmp', `xray-${version}-${process.arch}.zip`);
 if (fs.existsSync(destination)) process.exit(0);
 fs.mkdirSync(path.dirname(destination), { recursive: true });
