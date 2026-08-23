@@ -7,7 +7,7 @@ const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 
 // Cloudways assigns PORT (normally 3000); 443 is terminated by its HTTPS proxy.
-const port = Number(process.env.PORT || 3000);
+const port = Number(process.env.PORT || 8080);
 const uuid = process.env.UUID || crypto.randomUUID();
 const suffix = process.env.PATH_SUFFIX || crypto.randomBytes(6).toString('hex');
 const paths = {
