@@ -6,8 +6,16 @@ const crypto = require('crypto');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 
+const runtimeLogs = [];
+function recordLog(message) {
+  const line = `[${new Date().toISOString()}] ${String(message).trim()}`;
+  runtimeLogs.push(line);
+  if (runtimeLogs.length > 200) runtimeLogs.shift();
+  console.error(line);
+}
+
 // Cloudways assigns PORT (normally 3000); 443 is terminated by its HTTPS proxy.
-const port = Number(process.env.PORT || 8080);
+const port = Number(process.env.PORT || 3000);
 const uuid = process.env.UUID || crypto.randomUUID();
 const suffix = process.env.PATH_SUFFIX || crypto.randomBytes(6).toString('hex');
 const paths = {
@@ -36,15 +44,18 @@ fs.writeFileSync(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
 let xray;
 if (fs.existsSync(xrayPath)) {
   const validation = spawnSync(xrayPath, ['run', '-test', '-config', configPath], { encoding: 'utf8' });
-  if (validation.stdout) process.stdout.write(validation.stdout);
-  if (validation.stderr) process.stderr.write(validation.stderr);
+  if (validation.stdout) recordLog(`Xray test: ${validation.stdout}`);
+  if (validation.stderr) recordLog(`Xray test error: ${validation.stderr}`);
   if (validation.status !== 0) {
-    console.error(`Xray configuration test failed with exit code ${validation.status}`);
+    recordLog(`Xray configuration test failed with exit code ${validation.status}`);
     process.exit(validation.status || 1);
   }
-  xray = spawn(xrayPath, ['run', '-config', configPath], { stdio: 'inherit' });
-  xray.on('exit', (code, signal) => { if (!shuttingDown) { console.error(`Xray exited: ${code || signal}`); process.exit(code || 1); } });
-} else console.warn(`Xray binary not found at ${xrayPath}`);
+  xray = spawn(xrayPath, ['run', '-config', configPath], { stdio: ['ignore', 'pipe', 'pipe'] });
+  xray.stdout.on('data', data => recordLog(`Xray: ${data}`));
+  xray.stderr.on('data', data => recordLog(`Xray error: ${data}`));
+  xray.on('error', error => recordLog(`Xray process error: ${error.stack || error}`));
+  xray.on('exit', (code, signal) => { recordLog(`Xray exited: code=${code}, signal=${signal}`); if (!shuttingDown) process.exit(code || 1); });
+} else recordLog(`Xray binary not found at ${xrayPath}`);
 
 const targets = { [paths.vless]: 14016, [paths.vmess]: 23456, [paths.trojan]: 25432, [paths.ss]: 30300 };
 function forwardHttp(req, res, targetPort) {
@@ -53,7 +64,7 @@ function forwardHttp(req, res, targetPort) {
     upstreamRes.pipe(res);
   });
   upstream.on('timeout', () => upstream.destroy());
-  upstream.on('error', error => { console.error(`Proxy error: ${error.message}`); if (!res.headersSent) res.writeHead(502); res.end('Bad gateway'); });
+  upstream.on('error', error => { recordLog(`Proxy error: ${error.message}`); if (!res.headersSent) res.writeHead(502); res.end('Bad gateway'); });
   req.pipe(upstream);
 }
 const server = http.createServer((req, res) => {
@@ -63,6 +74,11 @@ const server = http.createServer((req, res) => {
     if (process.env.EXPOSE_PASS !== 'true') return res.writeHead(404).end('Not found');
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(`UUID: ${uuid}\nPATH_SUFFIX: ${suffix}\nVLESS_PATH: ${paths.vless}\nVMESS_PATH: ${paths.vmess}\nTROJAN_PATH: ${paths.trojan}\nSS_PATH: ${paths.ss}\n`);
+  }
+  if (requestPath === '/logs') {
+    if (process.env.DEBUG_LOGS !== 'true') return res.writeHead(404).end('Not found');
+    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+    return res.end(runtimeLogs.join('\n') || 'No runtime logs yet.');
   }
   if (targets[requestPath]) return forwardHttp(req, res, targets[requestPath]);
   res.writeHead(404).end('Not found');
@@ -78,7 +94,7 @@ server.on('upgrade', (req, socket, head) => {
     socket.pipe(upstream).pipe(socket);
   });
   upstream.setTimeout(3600000);
-  upstream.on('error', error => { console.error(`WebSocket proxy error: ${error.message}`); socket.destroy(); });
+  upstream.on('error', error => { recordLog(`WebSocket proxy error: ${error.message}`); socket.destroy(); });
   socket.on('error', () => upstream.destroy());
 });
 
