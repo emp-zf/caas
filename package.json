@@ -1,0 +1,10 @@
+{
+  "name": "xray-nodejs-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node.js WebSocket gateway for Xray-core",
+  "main": "server.js",
+  "scripts": { "build": "node build-xray.js", "start": "node server.js" },
+  "engines": { "node": ">=22" },
+  "dependencies": { "adm-zip": "^0.5.16" }
+}
