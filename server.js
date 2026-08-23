@@ -6,7 +6,8 @@ const crypto = require('crypto');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const port = Number(process.env.PORT || 443);
+// Cloudways assigns PORT (normally 3000); 443 is terminated by its HTTPS proxy.
+const port = Number(process.env.PORT || 3000);
 const uuid = process.env.UUID || crypto.randomUUID();
 const suffix = process.env.PATH_SUFFIX || crypto.randomBytes(6).toString('hex');
 const paths = {
