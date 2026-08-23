@@ -11,5 +11,5 @@ RUN npm install --omit=dev
 COPY . .
 RUN npm run build
 
-EXPOSE 443
+EXPOSE 3000
 CMD ["npm", "start"]
