@@ -4,7 +4,7 @@ const http = require('http');
 const net = require('net');
 const crypto = require('crypto');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 // Cloudways assigns PORT (normally 3000); 443 is terminated by its HTTPS proxy.
 const port = Number(process.env.PORT || 3000);
@@ -35,6 +35,13 @@ const xrayPath = process.env.XRAY_BIN || path.join(__dirname, 'bin', 'xray');
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
 let xray;
 if (fs.existsSync(xrayPath)) {
+  const validation = spawnSync(xrayPath, ['run', '-test', '-config', configPath], { encoding: 'utf8' });
+  if (validation.stdout) process.stdout.write(validation.stdout);
+  if (validation.stderr) process.stderr.write(validation.stderr);
+  if (validation.status !== 0) {
+    console.error(`Xray configuration test failed with exit code ${validation.status}`);
+    process.exit(validation.status || 1);
+  }
   xray = spawn(xrayPath, ['run', '-config', configPath], { stdio: 'inherit' });
   xray.on('exit', (code, signal) => { if (!shuttingDown) { console.error(`Xray exited: ${code || signal}`); process.exit(code || 1); } });
 } else console.warn(`Xray binary not found at ${xrayPath}`);
