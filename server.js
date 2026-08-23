@@ -10,8 +10,8 @@ const port = Number(process.env.PORT || 443);
 const uuid = process.env.UUID || crypto.randomUUID();
 const suffix = process.env.PATH_SUFFIX || crypto.randomBytes(6).toString('hex');
 const paths = {
-  vless: `/vless_juan_${suffix}`, vmess: `/vmess_juan_${suffix}`,
-  trojan: `/trojan-ws_juan_${suffix}`, ss: `/ss-ws_juan_${suffix}`
+  vless: `/vless_${suffix}`, vmess: `/vmess_${suffix}`,
+  trojan: `/trojan-ws_${suffix}`, ss: `/ss-ws_${suffix}`
 };
 const inboundDefinitions = [
   ['vless', 14016, { decryption: 'none', clients: [{ id: uuid }] }],
