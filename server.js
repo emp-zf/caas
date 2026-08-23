@@ -7,7 +7,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 // Cloudways assigns PORT (normally 3000); 443 is terminated by its HTTPS proxy.
-const port = Number(process.env.PORT || 8080);
+const port = Number(process.env.PORT || 3000);
 const uuid = process.env.UUID || crypto.randomUUID();
 const suffix = process.env.PATH_SUFFIX || crypto.randomBytes(6).toString('hex');
 const paths = {
@@ -51,7 +51,7 @@ function forwardHttp(req, res, targetPort) {
 }
 const server = http.createServer((req, res) => {
   const requestPath = req.url.split('?')[0];
-  if (requestPath === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end('<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>JuanScript</title></head><body style="background:#1c1c1c;color:white;font:28px Arial;text-align:center;padding-top:20vh"><p>Made by</p><h1>JuanScript</h1></body></html>');
+  if (requestPath === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end('<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>Made by Zhuo Fan</title></head><body style="background:#1c1c1c;color:white;font:28px Arial;text-align:center;padding-top:20vh"><p>Made by</p><h1>Zhuo Fan</h1></body></html>');
   if (requestPath === '/pass') {
     if (process.env.EXPOSE_PASS !== 'true') return res.writeHead(404).end('Not found');
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
