@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const port = Number(process.env.PORT || 8080);
+const port = Number(process.env.PORT || 443);
 const uuid = process.env.UUID || crypto.randomUUID();
 const suffix = process.env.PATH_SUFFIX || crypto.randomBytes(6).toString('hex');
 const paths = {
