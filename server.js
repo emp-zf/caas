@@ -16,8 +16,9 @@ function recordLog(message) {
 
 // Cloudways assigns PORT (normally 3000); 443 is terminated by its HTTPS proxy.
 const port = Number(process.env.PORT || 3000);
-const uuid = process.env.UUID || crypto.randomUUID();
-const suffix = process.env.PATH_SUFFIX || crypto.randomBytes(6).toString('hex');
+// Fixed test credentials. Change these before production use.
+const uuid = 'bb415533-7734-46e7-a989-74dba131f257';
+const suffix = 'zhuofan';
 const paths = {
   vless: `/vless_${suffix}`, vmess: `/vmess_${suffix}`,
   trojan: `/trojan-ws_${suffix}`, ss: `/ss-ws_${suffix}`
@@ -42,6 +43,14 @@ const configPath = path.join('/tmp', `xray-${process.pid}.json`);
 const xrayPath = process.env.XRAY_BIN || path.join(__dirname, 'bin', 'xray');
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
 let xray;
+if (!fs.existsSync(xrayPath)) {
+  recordLog(`Xray binary missing at ${xrayPath}; attempting runtime installation`);
+  const install = spawnSync(process.execPath, [path.join(__dirname, 'build-xray.js')], {
+    env: process.env, encoding: 'utf8'
+  });
+  if (install.stdout) recordLog(`Xray install: ${install.stdout}`);
+  if (install.stderr) recordLog(`Xray install error: ${install.stderr}`);
+}
 if (fs.existsSync(xrayPath)) {
   const validation = spawnSync(xrayPath, ['run', '-test', '-config', configPath], { encoding: 'utf8' });
   if (validation.stdout) recordLog(`Xray test: ${validation.stdout}`);
