@@ -30,7 +30,9 @@ const inboundDefinitions = [
   ['shadowsocks', 30300, { clients: [{ method: 'aes-128-gcm', password: uuid }] }]
 ];
 const config = {
-  log: { access: '/dev/stdout', error: '/dev/stderr', loglevel: process.env.XRAY_LOGLEVEL || 'warning' },
+  // Cloudways does not expose /dev/stdout as a device to child processes.
+  // Node captures Xray stdout/stderr below, so Xray file logging is disabled.
+  log: { access: '', error: '', loglevel: process.env.XRAY_LOGLEVEL || 'warning' },
   inbounds: inboundDefinitions.map(([protocol, port, settings]) => ({
     listen: '127.0.0.1', port, protocol, settings,
     streamSettings: { network: 'ws', security: 'none', wsSettings: { path: paths[protocol === 'shadowsocks' ? 'ss' : protocol] } }
