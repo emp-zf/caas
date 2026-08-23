@@ -56,14 +56,14 @@ if (fs.existsSync(xrayPath)) {
   if (validation.stdout) recordLog(`Xray test: ${validation.stdout}`);
   if (validation.stderr) recordLog(`Xray test error: ${validation.stderr}`);
   if (validation.status !== 0) {
-    recordLog(`Xray configuration test failed with exit code ${validation.status}`);
-    process.exit(validation.status || 1);
+    recordLog(`Xray configuration test failed with exit code ${validation.status}; keeping Node diagnostics online`);
+  } else {
+    xray = spawn(xrayPath, ['run', '-config', configPath], { stdio: ['ignore', 'pipe', 'pipe'] });
+    xray.stdout.on('data', data => recordLog(`Xray: ${data}`));
+    xray.stderr.on('data', data => recordLog(`Xray error: ${data}`));
+    xray.on('error', error => recordLog(`Xray process error: ${error.stack || error}`));
+    xray.on('exit', (code, signal) => { recordLog(`Xray exited: code=${code}, signal=${signal}; keeping Node diagnostics online`); xray = null; });
   }
-  xray = spawn(xrayPath, ['run', '-config', configPath], { stdio: ['ignore', 'pipe', 'pipe'] });
-  xray.stdout.on('data', data => recordLog(`Xray: ${data}`));
-  xray.stderr.on('data', data => recordLog(`Xray error: ${data}`));
-  xray.on('error', error => recordLog(`Xray process error: ${error.stack || error}`));
-  xray.on('exit', (code, signal) => { recordLog(`Xray exited: code=${code}, signal=${signal}`); if (!shuttingDown) process.exit(code || 1); });
 } else recordLog(`Xray binary not found at ${xrayPath}`);
 
 const targets = { [paths.vless]: 14016, [paths.vmess]: 23456, [paths.trojan]: 25432, [paths.ss]: 30300 };
