@@ -33,13 +33,13 @@ function validPath(value) {
 function loadGatewayConfig() {
   try {
     const saved = JSON.parse(fs.readFileSync(configFile, 'utf8'));
-    if (validUuid(saved.uuid) && saved.paths && Object.values(saved.paths).every(validPath)) return saved;
+    if (validUuid(saved.uuid) && saved.paths && Object.values(saved.paths).every(validPath)) return { ...saved, paths: { ...saved.paths, xhttp: saved.paths.xhttp || '/xhttp_zhuofan' } };
   } catch (error) {
     if (error.code !== 'ENOENT') recordLog(`Configuration load error: ${error.message}`);
   }
   return {
     uuid: defaultUuid,
-    paths: { vless: '/vless_zhuofan', vmess: '/vmess_zhuofan', trojan: '/trojan-ws_zhuofan', ss: '/ss-ws_zhuofan' }
+    paths: { vless: '/vless_zhuofan', vmess: '/vmess_zhuofan', trojan: '/trojan-ws_zhuofan', ss: '/ss-ws_zhuofan', xhttp: '/xhttp_zhuofan' }
   };
 }
 
@@ -56,13 +56,14 @@ function xrayConfig() {
     ['vless', 14016, { decryption: 'none', clients: [{ id: gatewayConfig.uuid }] }],
     ['vmess', 23456, { clients: [{ id: gatewayConfig.uuid, alterId: 0 }] }],
     ['trojan', 25432, { clients: [{ password: gatewayConfig.uuid }] }],
-    ['shadowsocks', 30300, { clients: [{ method: 'aes-128-gcm', password: gatewayConfig.uuid }] }]
+    ['shadowsocks', 30300, { clients: [{ method: 'aes-128-gcm', password: gatewayConfig.uuid }] }],
+    ['xhttp', 14443, { decryption: 'none', clients: [{ id: gatewayConfig.uuid, email: gatewayConfig.uuid }] }]
   ];
   return {
     log: { access: '', error: '', loglevel: process.env.XRAY_LOGLEVEL || 'warning' },
     inbounds: inbounds.map(([protocol, inboundPort, settings]) => ({
       listen: '127.0.0.1', port: inboundPort, protocol, settings,
-      streamSettings: { network: 'ws', security: 'none', wsSettings: { path: gatewayConfig.paths[protocol === 'shadowsocks' ? 'ss' : protocol] } }
+      streamSettings: protocol === 'xhttp' ? { network: 'xhttp', security: 'none', xhttpSettings: { path: gatewayConfig.paths.xhttp } } : { network: 'ws', security: 'none', wsSettings: { path: gatewayConfig.paths[protocol === 'shadowsocks' ? 'ss' : protocol] } }
     })),
     outbounds: [{ protocol: 'freedom', settings: {} }, { protocol: 'blackhole', settings: {}, tag: 'blocked' }],
     routing: { rules: [{ type: 'field', ip: ['0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '169.254.0.0/16', '172.16.0.0/12', '192.0.0.0/24', '192.0.2.0/24', '192.168.0.0/16', '198.18.0.0/15', '198.51.100.0/24', '203.0.113.0/24', '::1/128', 'fc00::/7', 'fe80::/10'], outboundTag: 'blocked' }, { type: 'field', outboundTag: 'blocked', protocol: ['bittorrent'] }] }
@@ -110,7 +111,8 @@ function buildUris(req) {
     vless: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=ws&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.vless)}#${encoded(label + ' VLESS')}`,
     vmess: `vmess://${vmess}`,
     trojan: `trojan://${gatewayConfig.uuid}@${host}:443?security=tls&type=ws&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.trojan)}#${encoded(label + ' Trojan')}`,
-    ss: `ss://${Buffer.from(`aes-128-gcm:${gatewayConfig.uuid}`).toString('base64url')}@${host}:443/?plugin=v2ray-plugin%3Bmode%3Dwebsocket%3Bpath%3D${encoded(gatewayConfig.paths.ss)}%3Bhost%3D${encoded(host)}#${encoded(label + ' Shadowsocks')}`
+    ss: `ss://${Buffer.from(`aes-128-gcm:${gatewayConfig.uuid}`).toString('base64url')}@${host}:443/?plugin=v2ray-plugin%3Bmode%3Dwebsocket%3Bpath%3D${encoded(gatewayConfig.paths.ss)}%3Bhost%3D${encoded(host)}#${encoded(label + ' Shadowsocks')}`,
+    xhttp: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=xhttp&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.xhttp)}#${encoded(label + ' XHTTP')}`
   };
 }
 
@@ -150,13 +152,15 @@ function openQr(source, name){let modal=document.querySelector('#qr-modal');if(!
 function compactUriCards(){const columns=window.innerWidth<=800?'1fr':'max-content minmax(0,1fr) auto';document.querySelectorAll('.protocol').forEach(card=>{card.style.gridTemplateColumns=columns})}
 function openConfig(){const modal=document.querySelector('#config-modal');if(modal)modal.style.display='grid'}
 function initializeConfigModal(){const panel=document.querySelector('#config')&&document.querySelector('#config').closest('.card');const layout=document.querySelector('.layout');if(!panel||document.querySelector('#config-modal'))return;if(layout&&layout.firstElementChild){layout.firstElementChild.remove();const profiles=layout.querySelector('.card');if(profiles)profiles.style.gridColumn='1/-1'}const modal=document.createElement('div');modal.id='config-modal';modal.style='position:fixed;inset:0;z-index:9;display:none;place-items:center;padding:20px;background:#03100dcc';const inner=document.createElement('div');inner.style='position:relative;width:min(620px,100%);max-height:90vh;overflow:auto;padding:22px;background:#102124;border:1px solid #315c56;border-radius:18px;box-shadow:0 24px 80px #0009';const close=document.createElement('button');close.textContent='Close';close.className='secondary';close.style='position:absolute;right:22px;top:22px;width:auto';close.onclick=()=>modal.style.display='none';inner.append(close);inner.append(panel);modal.append(inner);modal.onclick=e=>{if(e.target===modal)modal.style.display='none'};document.body.append(modal);const actions=document.querySelector('.actions');if(actions&&!document.querySelector('#config-button')){const button=document.createElement('button');button.id='config-button';button.className='secondary';button.textContent='Configuration';button.onclick=openConfig;actions.insertBefore(button,actions.firstElementChild)}window.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.style.display==='grid')modal.style.display='none'})}
+function addXhttpConfig(){const form=document.querySelector('#config');const fields=form&&form.querySelector('.fields');if(!fields||document.querySelector('#xhttp'))return;const label=document.createElement('label');label.textContent='XHTTP path';const input=document.createElement('input');input.id='xhttp';input.required=true;label.append(input);fields.append(label)}
+function bindConfigForm(){const form=document.querySelector('#config');if(!form)return;form.onsubmit=async event=>{event.preventDefault();const paths={};for(const key of ['vless','vmess','trojan','ss','xhttp'])paths[key]=document.querySelector('#'+key).value;try{const data=await api('/api/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({uuid:document.querySelector('#uuid').value,paths})});show(data);document.querySelector('#xhttp').value=data.paths.xhttp;document.querySelector('#status').textContent='Saved and Xray restarted.'}catch(error){document.querySelector('#status').textContent=error.message}}}
 function renderLogs(logs){const output=document.querySelector('#logs');if(!output)return;output.textContent=logs.join('\\n');output.scrollTop=output.scrollHeight}
-async function load(){try{show(await api('/api/config'));compactUriCards();initializeConfigModal();renderLogs((await api('/api/logs')).logs)}catch(e){document.querySelector('#status').textContent=e.message}}
+async function load(){try{const data=await api('/api/config');show(data);compactUriCards();initializeConfigModal();addXhttpConfig();document.querySelector('#xhttp').value=data.paths.xhttp;bindConfigForm();renderLogs((await api('/api/logs')).logs)}catch(e){document.querySelector('#status').textContent=e.message}}
 async function logout(){await fetch('/api/logout',{method:'POST'});location='/dashboard/login'}window.addEventListener('resize',compactUriCards);load();setInterval(async()=>{try{renderLogs((await api('/api/logs')).logs)}catch{}},3000);
 </script></body></html>`;
 
 function targets() {
-  return { [gatewayConfig.paths.vless]: 14016, [gatewayConfig.paths.vmess]: 23456, [gatewayConfig.paths.trojan]: 25432, [gatewayConfig.paths.ss]: 30300 };
+  return { [gatewayConfig.paths.vless]: 14016, [gatewayConfig.paths.vmess]: 23456, [gatewayConfig.paths.trojan]: 25432, [gatewayConfig.paths.ss]: 30300, [gatewayConfig.paths.xhttp]: 14443 };
 }
 function forwardHttp(req, res, targetPort) {
   const upstream = http.request({ hostname: '127.0.0.1', port: targetPort, path: req.url, method: req.method, headers: req.headers, timeout: 3600000 }, upstreamRes => { res.writeHead(upstreamRes.statusCode, upstreamRes.headers); upstreamRes.pipe(res); });
