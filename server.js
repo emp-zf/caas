@@ -143,7 +143,36 @@ function sendJson(res, status, body) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
   res.end(payload);
 }
-function networkInformation(req) {
+async function networkProbe(url) {
+  const started = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(url, { signal: controller.signal, redirect: 'follow' });
+    return { ok: true, status: response.status, latency: Date.now() - started };
+  } catch (error) {
+    return { ok: false, error: error.name === 'AbortError' ? 'timeout' : error.message, latency: Date.now() - started };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+async function networkInformation(req) {
+  const testTargets = [
+    ['ByteDance Douyin', 'https://www.douyin.com', 'DOMESTIC'],
+    ['Bilibili', 'https://www.bilibili.com', 'DOMESTIC'],
+    ['Tencent WeChat', 'https://weixin.qq.com', 'DOMESTIC'],
+    ['Alibaba Taobao', 'https://www.taobao.com', 'DOMESTIC'],
+    ['GitHub', 'https://github.com', 'INTERNATIONAL'],
+    ['Telegram DC5', 'https://telegram.org', 'INTERNATIONAL'],
+    ['X.com', 'https://x.com', 'INTERNATIONAL'],
+    ['YouTube', 'https://www.youtube.com', 'INTERNATIONAL']
+  ];
+  const [ipResult, cloudflareResult, ...tests] = await Promise.all([
+    fetch('https://api.ipify.org?format=json').then(response => response.json()).catch(() => ({})),
+    fetch('https://www.cloudflare.com/cdn-cgi/trace').then(response => response.text()).catch(() => ''),
+    ...testTargets.map(async ([name, url, region]) => ({ name, region, ...(await networkProbe(url)) }))
+  ]);
+  const trace = Object.fromEntries(cloudflareResult.split('\n').filter(line => line.includes('=')).map(line => line.split('=')));
   return {
     host: publicHost(req),
     protocol: req.headers['x-forwarded-proto'] || 'http',
@@ -151,7 +180,11 @@ function networkInformation(req) {
     uptime: Math.floor(process.uptime()),
     runtime: `Node ${process.version} · ${process.platform}/${process.arch}`,
     inbounds: { vless: 14016, vmess: 23456, trojan: 25432, shadowsocks: 30300, xhttp: 14443 },
-    interfaces: Object.keys(os.networkInterfaces()).filter(name => name !== 'lo')
+    interfaces: Object.keys(os.networkInterfaces()).filter(name => name !== 'lo'),
+    publicIp: ipResult.ip || 'unavailable',
+    location: trace.loc || 'unknown',
+    cloudflareIp: trace.ip || 'unavailable',
+    tests
   };
 }
 function requireAuth(req, res) {
@@ -183,9 +216,11 @@ async function refreshNetwork(){try{const data=await api('/api/network');const d
 function bindConfigForm(){const form=document.querySelector('#config');if(!form)return;form.onsubmit=async event=>{event.preventDefault();const paths={};for(const key of ['vless','vmess','trojan','ss','xhttp'])paths[key]=document.querySelector('#'+key).value;try{const data=await api('/api/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({uuid:document.querySelector('#uuid').value,paths})});show(data);document.querySelector('#xhttp').value=data.paths.xhttp;document.querySelector('#status').textContent='Saved and Xray restarted.'}catch(error){document.querySelector('#status').textContent=error.message}}}
 function arrangeActions(){const actions=document.querySelector('.actions');const logoutButton=actions&&actions.querySelector('button[onclick="logout()"]');if(!actions||!logoutButton)return;for(const id of ['config-button','logs-button','theme']){const button=document.querySelector('#'+id);if(button)actions.insertBefore(button,logoutButton)}}
 function renderLogs(logs){const output=document.querySelector('#logs');if(!output)return;output.textContent=logs.join('\\n');output.scrollTop=output.scrollHeight}
-async function load(){try{const data=await api('/api/config');show(data);compactUriCards();initializeConfigModal();addXhttpConfig();addNetworkCard();document.querySelector('#xhttp').value=data.paths.xhttp;bindConfigForm();arrangeActions();await refreshNetwork();renderLogs((await api('/api/logs')).logs)}catch(e){document.querySelector('#status').textContent=e.message}}
-async function logout(){await fetch('/api/logout',{method:'POST'});location='/dashboard/login'}window.addEventListener('resize',compactUriCards);load();setInterval(async()=>{try{renderLogs((await api('/api/logs')).logs);await refreshNetwork()}catch{}},3000);
-</script></body></html>`;
+async function load(){try{const data=await api('/api/config');show(data);compactUriCards();initializeConfigModal();addXhttpConfig();addNetworkCard();ensureNetworkTests();document.querySelector('#xhttp').value=data.paths.xhttp;bindConfigForm();arrangeActions();await refreshNetwork();renderNetworkTests();renderLogs((await api('/api/logs')).logs)}catch(e){document.querySelector('#status').textContent=e.message}}
+async function logout(){await fetch('/api/logout',{method:'POST'});location='/dashboard/login'}window.addEventListener('resize',compactUriCards);load();setInterval(async()=>{try{renderLogs((await api('/api/logs')).logs)}catch{}},3000);
+function ensureNetworkTests(){const card=document.querySelector('#network-card');if(!card||document.querySelector('#network-tests'))return;const section=document.createElement('div');section.id='network-tests';section.style='margin-top:18px';card.append(section)}
+async function renderNetworkTests(){try{const data=await api('/api/network');const target=document.querySelector('#network-tests');if(!target)return;const rows=[['Domestic testing','ByteDance Douyin',data.publicIp,data.location,'IP used for domestic destinations'],['Overseas testing','Fish that slipped through the net',data.publicIp,data.location,'IP used for international destinations'],['Cloudflare','ProxyIPv4',data.cloudflareIp,data.location,'Landing IP used for Cloudflare CDN'],['External testing','Google / Twitter (X.com)',data.publicIp,data.location,'IP used for external destinations']];target.innerHTML='<h3 style="margin:0 0 12px;font-size:14px">🌍 Current network information</h3>'+rows.map(row=>'<div style="display:grid;grid-template-columns:minmax(150px,.7fr) minmax(0,1.3fr);gap:4px 14px;padding:12px 0;border-top:1px solid #2c4e4b"><strong style="font-size:12px">'+row[0]+'</strong><span style="font-size:12px;color:#9eb9b4">'+row[1]+'</span><span style="font:12px ui-monospace,monospace;color:#70f1bc">'+row[2]+'</span><span style="font-size:11px;color:#77918e">'+row[3]+' · '+row[4]+'</span></div>').join('')+'<h3 style="margin:18px 0 10px;font-size:14px">Connectivity checks</h3><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+data.tests.map(test=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid #2c4e4b;border-radius:8px;background:#091416"><span style="font-size:12px">'+test.name+'</span><strong style="font:12px ui-monospace,monospace;color:'+(test.ok?'#70f1bc':'#fca5a5')+'">'+(test.ok?test.latency+' ms':test.error)+'</strong></div>').join('')+'</div>'}catch{}}
+setInterval(()=>{ensureNetworkTests();refreshNetwork();renderNetworkTests()},30000);</script></body></html>`;
 
 function targets() {
   return { [gatewayConfig.paths.vless]: 14016, [gatewayConfig.paths.vmess]: 23456, [gatewayConfig.paths.trojan]: 25432, [gatewayConfig.paths.ss]: 30300, [gatewayConfig.paths.xhttp]: 14443 };
@@ -213,7 +248,7 @@ const server = http.createServer(async (req, res) => {
   if (requestPath === '/api/config' && req.method === 'GET') { if (!requireAuth(req, res)) return; const uris = buildUris(req); const qr = {}; for (const [key, uri] of Object.entries(uris)) qr[key] = await QRCode.toDataURL(uri, { margin: 1, width: 240 }); return sendJson(res, 200, { ...gatewayConfig, uris, qr }); }
   if (requestPath === '/api/config' && req.method === 'PUT') { if (!requireAuth(req, res)) return; try { const body = await readBody(req); const pathValues = body.paths && ['vless', 'vmess', 'trojan', 'ss'].map(key => body.paths[key]); if (!validUuid(body.uuid) || !body.paths || !pathValues.every(validPath) || new Set(pathValues).size !== pathValues.length) throw new Error('Invalid UUID or paths'); const nextConfig = { uuid: body.uuid.toLowerCase(), paths: body.paths }; saveGatewayConfig(nextConfig); gatewayConfig = nextConfig; restartXray(); recordLog('Gateway configuration updated from dashboard'); const uris = buildUris(req); const qr = {}; for (const [key, uri] of Object.entries(uris)) qr[key] = await QRCode.toDataURL(uri, { margin: 1, width: 240 }); return sendJson(res, 200, { ...gatewayConfig, uris, qr }); } catch (error) { return sendJson(res, 400, { error: error.message }); } }
   if (requestPath === '/api/logs' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, { logs: runtimeLogs }); }
-  if (requestPath === '/api/network' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, networkInformation(req)); }
+  if (requestPath === '/api/network' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, await networkInformation(req)); }
   if (requestPath === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end('<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>Made by Zhuo Fan</title></head><body style="background:#1c1c1c;color:white;font:28px Arial;text-align:center;padding-top:20vh"><p>Made by</p><h1>Zhuo Fan</h1></body></html>');
   if (requestPath === '/pass') { if (process.env.EXPOSE_PASS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(`UUID: ${gatewayConfig.uuid}\nVLESS_PATH: ${gatewayConfig.paths.vless}\nVMESS_PATH: ${gatewayConfig.paths.vmess}\nTROJAN_PATH: ${gatewayConfig.paths.trojan}\nSS_PATH: ${gatewayConfig.paths.ss}\n`); }
   if (requestPath === '/logs') { if (process.env.DEBUG_LOGS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(runtimeLogs.join('\n') || 'No runtime logs yet.'); }
