@@ -70,13 +70,13 @@ function xrayConfig() {
     ['vmess', 23456, { clients: [{ id: gatewayConfig.uuid, alterId: 0 }] }],
     ['trojan', 25432, { clients: [{ password: gatewayConfig.uuid }] }],
     ['shadowsocks', 30300, { clients: [{ method: 'aes-128-gcm', password: gatewayConfig.uuid }] }],
-    ['xhttp', 14443, { decryption: 'none', clients: [{ id: gatewayConfig.uuid, email: gatewayConfig.uuid }] }]
+    ['vless', 14443, { decryption: 'none', clients: [{ id: gatewayConfig.uuid, email: gatewayConfig.uuid }] }, 'xhttp']
   ];
   return {
     log: { access: '', error: '', loglevel: process.env.XRAY_LOGLEVEL || 'warning' },
-    inbounds: inbounds.map(([protocol, inboundPort, settings]) => ({
+    inbounds: inbounds.map(([protocol, inboundPort, settings, transport = protocol]) => ({
       listen: '127.0.0.1', port: inboundPort, protocol, settings,
-      streamSettings: protocol === 'xhttp' ? { network: 'xhttp', security: 'none', xhttpSettings: { path: gatewayConfig.paths.xhttp } } : { network: 'ws', security: 'none', wsSettings: { path: gatewayConfig.paths[protocol === 'shadowsocks' ? 'ss' : protocol] } }
+      streamSettings: transport === 'xhttp' ? { network: 'xhttp', security: 'none', xhttpSettings: { path: gatewayConfig.paths.xhttp } } : { network: 'ws', security: 'none', wsSettings: { path: gatewayConfig.paths[protocol === 'shadowsocks' ? 'ss' : transport] } }
     })),
     outbounds: [{ protocol: 'freedom', settings: {} }, { protocol: 'blackhole', settings: {}, tag: 'blocked' }],
     routing: { rules: [{ type: 'field', ip: ['0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '169.254.0.0/16', '172.16.0.0/12', '192.0.0.0/24', '192.0.2.0/24', '192.168.0.0/16', '198.18.0.0/15', '198.51.100.0/24', '203.0.113.0/24', '::1/128', 'fc00::/7', 'fe80::/10'], outboundTag: 'blocked' }, { type: 'field', outboundTag: 'blocked', protocol: ['bittorrent'] }] }
