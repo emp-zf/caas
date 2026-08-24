@@ -175,6 +175,12 @@ async function logout(){await fetch('/api/logout',{method:'POST'});location='/da
 function targets() {
   return { [gatewayConfig.paths.vless]: 14016, [gatewayConfig.paths.vmess]: 23456, [gatewayConfig.paths.trojan]: 25432, [gatewayConfig.paths.ss]: 30300, [gatewayConfig.paths.xhttp]: 14443 };
 }
+function resolveTarget(requestPath) {
+  const routeMap = targets();
+  if (routeMap[requestPath]) return routeMap[requestPath];
+  if (requestPath.startsWith(`${gatewayConfig.paths.xhttp}/`)) return routeMap[gatewayConfig.paths.xhttp];
+  return undefined;
+}
 function forwardHttp(req, res, targetPort) {
   const upstream = http.request({ hostname: '127.0.0.1', port: targetPort, path: req.url, method: req.method, headers: req.headers, timeout: 3600000 }, upstreamRes => { res.writeHead(upstreamRes.statusCode, upstreamRes.headers); upstreamRes.pipe(res); });
   upstream.on('timeout', () => upstream.destroy());
@@ -195,11 +201,11 @@ const server = http.createServer(async (req, res) => {
   if (requestPath === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end('<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>Made by Zhuo Fan</title></head><body style="background:#1c1c1c;color:white;font:28px Arial;text-align:center;padding-top:20vh"><p>Made by</p><h1>Zhuo Fan</h1></body></html>');
   if (requestPath === '/pass') { if (process.env.EXPOSE_PASS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(`UUID: ${gatewayConfig.uuid}\nVLESS_PATH: ${gatewayConfig.paths.vless}\nVMESS_PATH: ${gatewayConfig.paths.vmess}\nTROJAN_PATH: ${gatewayConfig.paths.trojan}\nSS_PATH: ${gatewayConfig.paths.ss}\n`); }
   if (requestPath === '/logs') { if (process.env.DEBUG_LOGS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(runtimeLogs.join('\n') || 'No runtime logs yet.'); }
-  const targetPort = targets()[requestPath];
+  const targetPort = resolveTarget(requestPath);
   if (targetPort) return forwardHttp(req, res, targetPort);
   res.writeHead(404).end('Not found');
 });
-server.on('upgrade', (req, socket, head) => { const targetPort = targets()[req.url.split('?')[0]]; if (!targetPort) return socket.destroy(); const upstream = net.connect(targetPort, '127.0.0.1', () => { let request = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`; for (let i = 0; i < req.rawHeaders.length; i += 2) request += `${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`; upstream.write(`${request}\r\n`); if (head.length) upstream.write(head); socket.pipe(upstream).pipe(socket); }); upstream.setTimeout(3600000); upstream.on('error', error => { recordLog(`WebSocket proxy error: ${error.message}`); socket.destroy(); }); socket.on('error', () => upstream.destroy()); });
+server.on('upgrade', (req, socket, head) => { const targetPort = resolveTarget(req.url.split('?')[0]); if (!targetPort) return socket.destroy(); const upstream = net.connect(targetPort, '127.0.0.1', () => { let request = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`; for (let i = 0; i < req.rawHeaders.length; i += 2) request += `${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`; upstream.write(`${request}\r\n`); if (head.length) upstream.write(head); socket.pipe(upstream).pipe(socket); }); upstream.setTimeout(3600000); upstream.on('error', error => { recordLog(`WebSocket proxy error: ${error.message}`); socket.destroy(); }); socket.on('error', () => upstream.destroy()); });
 function shutdown(signal) { server.close(() => { if (xray) xray.kill('SIGTERM'); fs.rmSync(configPath, { force: true }); process.exit(0); }); setTimeout(() => process.exit(1), 10000).unref(); console.log(`Received ${signal}; shutting down`); }
 process.on('SIGTERM', () => shutdown('SIGTERM')); process.on('SIGINT', () => shutdown('SIGINT'));
 server.listen(port, '0.0.0.0', () => { console.log(`Listening on ${port}`); console.log(`Dashboard: /dashboard`); });
