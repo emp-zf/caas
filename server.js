@@ -76,7 +76,7 @@ function xrayConfig() {
     log: { access: '', error: '', loglevel: process.env.XRAY_LOGLEVEL || 'warning' },
     inbounds: inbounds.map(([protocol, inboundPort, settings, transport = protocol]) => ({
       listen: '127.0.0.1', port: inboundPort, protocol, settings,
-      streamSettings: transport === 'xhttp' ? { network: 'xhttp', security: 'none', xhttpSettings: { path: gatewayConfig.paths.xhttp } } : { network: 'ws', security: 'none', wsSettings: { path: gatewayConfig.paths[protocol === 'shadowsocks' ? 'ss' : transport] } }
+      streamSettings: transport === 'xhttp' ? { network: 'xhttp', security: 'none', xhttpSettings: { path: gatewayConfig.paths.xhttp, mode: 'auto' } } : { network: 'ws', security: 'none', wsSettings: { path: gatewayConfig.paths[protocol === 'shadowsocks' ? 'ss' : transport] } }
     })),
     outbounds: [{ protocol: 'freedom', settings: {} }, { protocol: 'blackhole', settings: {}, tag: 'blocked' }],
     routing: { rules: [{ type: 'field', ip: ['0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '169.254.0.0/16', '172.16.0.0/12', '192.0.0.0/24', '192.0.2.0/24', '192.168.0.0/16', '198.18.0.0/15', '198.51.100.0/24', '203.0.113.0/24', '::1/128', 'fc00::/7', 'fe80::/10'], outboundTag: 'blocked' }, { type: 'field', outboundTag: 'blocked', protocol: ['bittorrent'] }] }
@@ -125,7 +125,7 @@ function buildUris(req) {
     vmess: `vmess://${vmess}`,
     trojan: `trojan://${gatewayConfig.uuid}@${host}:443?security=tls&type=ws&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.trojan)}#${encoded(label + ' Trojan')}`,
     ss: `ss://${Buffer.from(`aes-128-gcm:${gatewayConfig.uuid}`).toString('base64url')}@${host}:443/?plugin=v2ray-plugin%3Bmode%3Dwebsocket%3Bpath%3D${encoded(gatewayConfig.paths.ss)}%3Bhost%3D${encoded(host)}#${encoded(label + ' Shadowsocks')}`,
-    xhttp: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=xhttp&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.xhttp)}#${encoded(label + ' XHTTP')}`
+    xhttp: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=xhttp&mode=auto&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.xhttp)}#${encoded(label + ' XHTTP')}`
   };
 }
 
