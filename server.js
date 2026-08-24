@@ -11,7 +11,9 @@ const runtimeLogs = [];
 const sessions = new Map();
 const port = Number(process.env.PORT || 3000);
 const defaultUuid = 'bb415533-7734-46e7-a989-74dba131f257';
-const configFile = process.env.GATEWAY_CONFIG_FILE || path.join(__dirname, 'data', 'gateway-config.json');
+const configuredConfigFile = process.env.GATEWAY_CONFIG_FILE || path.join(__dirname, 'data', 'gateway-config.json');
+const fallbackConfigFile = path.join('/tmp', 'zftunnel-config.json');
+let configFile = configuredConfigFile;
 const dashboardUser = process.env.DASHBOARD_USERNAME || 'admin';
 const dashboardPassword = process.env.DASHBOARD_PASSWORD;
 
@@ -35,6 +37,10 @@ function loadGatewayConfig() {
     const saved = JSON.parse(fs.readFileSync(configFile, 'utf8'));
     if (validUuid(saved.uuid) && saved.paths && Object.values(saved.paths).every(validPath)) return { ...saved, paths: { ...saved.paths, xhttp: saved.paths.xhttp || '/xhttp_zhuofan' } };
   } catch (error) {
+    if (error.code === 'EACCES' && configFile !== fallbackConfigFile) {
+      configFile = fallbackConfigFile;
+      return loadGatewayConfig();
+    }
     if (error.code !== 'ENOENT') recordLog(`Configuration load error: ${error.message}`);
   }
   return {
@@ -45,10 +51,17 @@ function loadGatewayConfig() {
 
 let gatewayConfig = loadGatewayConfig();
 function saveGatewayConfig(next) {
-  fs.mkdirSync(path.dirname(configFile), { recursive: true });
-  const temporary = `${configFile}.${process.pid}.tmp`;
-  fs.writeFileSync(temporary, JSON.stringify(next, null, 2), { mode: 0o600 });
-  fs.renameSync(temporary, configFile);
+  try {
+    fs.mkdirSync(path.dirname(configFile), { recursive: true });
+    const temporary = `${configFile}.${process.pid}.tmp`;
+    fs.writeFileSync(temporary, JSON.stringify(next, null, 2), { mode: 0o600 });
+    fs.renameSync(temporary, configFile);
+  } catch (error) {
+    if (error.code !== 'EACCES' || configFile === fallbackConfigFile) throw error;
+    configFile = fallbackConfigFile;
+    saveGatewayConfig(next);
+    recordLog('Persistent configuration path is not writable; using temporary runtime storage');
+  }
 }
 
 function xrayConfig() {
