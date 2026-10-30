@@ -4,7 +4,7 @@ const path = require('path');
 const https = require('https');
 const AdmZip = require('adm-zip');
 
-const version = '25.12.8';
+const version = '26.7.28';
 if (process.platform !== 'linux' || !['x64', 'arm64'].includes(process.arch)) {
   console.log(`Skipping Xray download for ${process.platform}/${process.arch}`); process.exit(0);
 }
