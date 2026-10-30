@@ -479,7 +479,7 @@ button.icon-btn svg{display:block}
 @media(max-width:800px){.features{grid-template-columns:1fr}.topbar{margin-bottom:48px}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.orb{animation:none}}
 
-.speed{background:radial-gradient(60% 45% at 82% 0%,rgba(14,165,233,.10),transparent 60%),radial-gradient(55% 50% at 15% 100%,rgba(139,92,246,.12),transparent 65%),linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.03));backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);border:1px solid var(--stroke);border-radius:var(--r-card);padding:24px;box-shadow:var(--shadow-card),inset 0 1px 0 var(--stroke-hi);animation:rise var(--dur-3) var(--ease) .18s both;transition:transform var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease);max-width:760px;margin:0 auto 72px}
+.speed{background:radial-gradient(60% 45% at 82% 0%,rgba(14,165,233,.10),transparent 60%),radial-gradient(55% 50% at 15% 100%,rgba(139,92,246,.12),transparent 65%),linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.03));backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);border:1px solid var(--stroke);border-radius:var(--r-card);padding:24px;box-shadow:var(--shadow-card),inset 0 1px 0 var(--stroke-hi);animation:rise var(--dur-3) var(--ease) .18s both;transition:transform var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease);max-width:760px;margin:72px auto 72px}
 .speed:hover{transform:translateY(-3px);border-color:var(--stroke-hi)}
 .speed__head{display:flex;justify-content:space-between;align-items:start;gap:12px}
 .speed h2{font-size:18px;margin:0 0 4px;font-weight:600;letter-spacing:-.02em}
