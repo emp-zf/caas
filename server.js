@@ -245,7 +245,7 @@ input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,va
 button{width:100%;padding:15px 16px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,var(--orb-b)));color:var(--accent-ink);font:600 15px Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;margin-top:12px;transition:transform var(--dur-2) var(--ease),filter var(--dur-2) var(--ease)}
 button:hover{filter:brightness(1.06);transform:translateY(-1px)}
 button:active{transform:scale(.98)}
-button.theme{position:absolute;right:20px;top:20px;width:auto;padding:9px 14px;margin:0;background:var(--glass);color:var(--ink);border:1px solid var(--stroke);font-size:13px;border-radius:8px;backdrop-filter:blur(var(--blur))}
+button.theme{position:absolute;right:20px;top:20px;width:38px;height:38px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;background:var(--glass);color:var(--ink);border:1px solid var(--stroke);border-radius:12px;backdrop-filter:blur(var(--blur));transition:border-color var(--dur-2) var(--ease),background var(--dur-2) var(--ease)}button.theme:hover{border-color:var(--stroke-hi);background:var(--glass-2)}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse-dot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.orb{animation:none}}
@@ -419,7 +419,7 @@ const server = http.createServer(async (req, res) => {
   if (requestPath === '/api/logs' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, { logs: runtimeLogs }); }
   if (requestPath === '/api/network' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, await networkInformation(req)); }
   if (requestPath === '/api/traffic' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, traffic); }
-  if (requestPath === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end('<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>Made by Zhuo Fan</title></head><body style="background:#1c1c1c;color:white;font:28px Arial;text-align:center;padding-top:20vh"><p>Made by</p><h1>Zhuo Fan</h1></body></html>');
+  if (requestPath === '/') return res.writeHead(302, { location: authenticated(req) ? '/dashboard' : '/dashboard/login' }).end();
   if (requestPath === '/pass') { if (process.env.EXPOSE_PASS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(`UUID: ${gatewayConfig.uuid}\nVLESS_PATH: ${gatewayConfig.paths.vless}\nVMESS_PATH: ${gatewayConfig.paths.vmess}\nTROJAN_PATH: ${gatewayConfig.paths.trojan}\nSS_PATH: ${gatewayConfig.paths.ss}\n`); }
   if (requestPath === '/logs') { if (process.env.DEBUG_LOGS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(runtimeLogs.join('\n') || 'No runtime logs yet.'); }
   const targetPort = resolveTarget(requestPath);
