@@ -94,6 +94,21 @@ const xrayPath = process.env.XRAY_BIN || path.join(__dirname, 'bin', 'xray');
 let xray;
 function startXray() {
   fs.writeFileSync(configPath, JSON.stringify(xrayConfig(), null, 2), { mode: 0o600 });
+  if (fs.existsSync(xrayPath)) {
+    let pinned = '';
+    try {
+      const src = fs.readFileSync(path.join(__dirname, 'build-xray.js'), 'utf8');
+      pinned = (src.match(/const version = '([^']+)'/) || [])[1] || '';
+    } catch (error) {}
+    const probe = spawnSync(xrayPath, ['version'], { encoding: 'utf8', timeout: 10000 });
+    const installed = (probe.stdout || probe.stderr || '').split('\n')[0] || '';
+    if (pinned && installed && !installed.includes(pinned)) {
+      recordLog(`Xray binary is ${installed.split(' ')[1] || 'unknown'}; updating to ${pinned}`);
+      const install = spawnSync(process.execPath, [path.join(__dirname, 'build-xray.js')], { env: process.env, encoding: 'utf8' });
+      if (install.stdout) recordLog(`Xray install: ${install.stdout}`);
+      if (install.stderr) recordLog(`Xray install error: ${install.stderr}`);
+    }
+  }
   if (!fs.existsSync(xrayPath)) {
     recordLog(`Xray binary missing at ${xrayPath}; attempting runtime installation`);
     const install = spawnSync(process.execPath, [path.join(__dirname, 'build-xray.js')], { env: process.env, encoding: 'utf8' });
