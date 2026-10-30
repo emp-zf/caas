@@ -1,0 +1,9 @@
+node_modules/
+bin/
+.agents/
+.opencode/
+.omo/
+.claude/
+skills-lock.json
+*.log
+npm-debug.log*
