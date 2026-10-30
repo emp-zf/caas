@@ -453,7 +453,7 @@ button.icon-btn svg{display:block}
 <div class="brand"><i></i>ZFTUNNEL<small>BY VELOCITY</small></div>
 <div class="actions">
 <button class="icon-btn" id="theme" onclick="toggleTheme()" aria-label="Toggle light/dark mode" title="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg></button>
-<button onclick="location.href='/dashboard/login'">Sign in</button>
+
 </div>
 </header>
 <section class="hero">
@@ -461,8 +461,7 @@ button.icon-btn svg{display:block}
 <h1>Your private connection, under your control.</h1>
 <p>A self-hosted Xray gateway with a glass-clear command center. Generate profiles, scan QR codes, monitor traffic and connectivity — all on infrastructure you own.</p>
 <div class="cta">
-<button class="primary" onclick="location.href='/dashboard/login'">Open dashboard</button>
-<button onclick="location.href='/dashboard/login'">Sign in</button>
+<button class="primary" id="hero-cta" onclick="location.href='__AUTH_HREF__'">__AUTH_HERO__</button>
 </div>
 </section>
 <section class="features">
@@ -485,7 +484,7 @@ const server = http.createServer(async (req, res) => {
   if (requestPath === '/api/logs' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, { logs: runtimeLogs }); }
   if (requestPath === '/api/network' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, await networkInformation(req)); }
   if (requestPath === '/api/traffic' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, traffic); }
-  if (requestPath === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(landingPage);
+  if (requestPath === '/') { const authed = authenticated(req); const page = landingPage.replaceAll('__AUTH_HREF__', authed ? '/dashboard' : '/dashboard/login').replaceAll('__AUTH_HERO__', authed ? 'Open dashboard' : 'Sign in'); return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(page); }
   if (requestPath === '/pass') { if (process.env.EXPOSE_PASS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(`UUID: ${gatewayConfig.uuid}\nVLESS_PATH: ${gatewayConfig.paths.vless}\nVMESS_PATH: ${gatewayConfig.paths.vmess}\nTROJAN_PATH: ${gatewayConfig.paths.trojan}\nSS_PATH: ${gatewayConfig.paths.ss}\n`); }
   if (requestPath === '/logs') { if (process.env.DEBUG_LOGS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(runtimeLogs.join('\n') || 'No runtime logs yet.'); }
   const targetPort = resolveTarget(requestPath);
