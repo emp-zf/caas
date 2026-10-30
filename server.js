@@ -406,6 +406,72 @@ function forwardHttp(req, res, targetPort) {
   upstream.on('close', () => { traffic.active = Math.max(0, traffic.active - 1); });
   req.pipe(upstream);
 }
+const landingPage = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>ZFTunnel by Velocity · Secure gateway</title><style>
+:root{color-scheme:dark;--field:#05090d;--field-2:#0a1418;--orb-a:#12d9a0;--orb-b:#0ea5e9;--orb-c:#8b5cf6;--glass:rgba(255,255,255,.06);--glass-2:rgba(255,255,255,.10);--surface:rgba(255,255,255,.05);--surface-2:rgba(10,20,24,.78);--stroke:rgba(255,255,255,.14);--stroke-hi:rgba(255,255,255,.24);--ink:#e8f3f1;--muted:#b6d2cc;--accent:#5ef2c3;--accent-ink:#062019;--r-card:20px;--r-ctl:12px;--shadow-card:0 24px 60px rgba(0,0,0,.38);--blur:20px;--ease:cubic-bezier(.22,1,.36,1);--dur-2:240ms;--dur-3:420ms}
+[data-theme=light]{color-scheme:light;--field:#eef4f1;--field-2:#f7faf8;--orb-a:#7ce8c8;--orb-b:#a5d8f5;--orb-c:#d9c8f7;--glass:rgba(255,255,255,.65);--glass-2:rgba(255,255,255,.80);--surface:rgba(255,255,255,.62);--surface-2:rgba(255,255,255,.88);--stroke:rgba(13,50,45,.16);--stroke-hi:rgba(255,255,255,.9);--ink:#0f2724;--muted:#55706a;--accent:#0d9488;--accent-ink:#ffffff;--shadow-card:0 24px 60px rgba(13,50,45,.14)}
+*{box-sizing:border-box}html,body{margin:0}body{min-height:100vh;background:radial-gradient(circle at 8% -5%,rgba(18,217,160,.14),transparent 42%),radial-gradient(circle at 92% 12%,rgba(14,165,233,.12),transparent 40%),radial-gradient(circle at 50% 58%,rgba(14,165,233,.08),transparent 45%),radial-gradient(circle at 45% 108%,rgba(139,92,246,.14),transparent 46%),var(--field);color:var(--ink);font:15px/1.6 Inter,ui-sans-serif,system-ui,sans-serif;transition:background var(--dur-2) var(--ease),color var(--dur-2) var(--ease)}
+.field{position:fixed;inset:0;z-index:-1;overflow:hidden;background:linear-gradient(180deg,var(--field),var(--field-2))}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
+.orb-a{width:540px;height:540px;left:-140px;top:-120px;background:var(--orb-a);opacity:.34;animation:drift-a 32s var(--ease) infinite alternate}
+.orb-b{width:480px;height:480px;right:-120px;top:18%;background:var(--orb-b);opacity:.30;animation:drift-b 38s var(--ease) infinite alternate}
+.orb-c{width:440px;height:440px;left:28%;bottom:-160px;background:var(--orb-c);opacity:.28;animation:drift-c 30s var(--ease) infinite alternate}
+@keyframes drift-a{from{transform:translate(0,0) scale(1)}to{transform:translate(80px,60px) scale(1.08)}}
+@keyframes drift-b{from{transform:translate(0,0) scale(1)}to{transform:translate(-70px,50px) scale(1.05)}}
+@keyframes drift-c{from{transform:translate(0,0) scale(1)}to{transform:translate(50px,-60px) scale(1.1)}}
+.shell{max-width:1080px;margin:auto;padding:36px 24px 64px;position:relative}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:72px;animation:rise var(--dur-3) var(--ease) both}
+.brand{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:.12em}
+.brand i{width:12px;height:12px;display:block;border-radius:50%;background:var(--accent);box-shadow:0 0 20px var(--accent);animation:pulse-dot 2.4s var(--ease) infinite}
+.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:.08em;font-weight:500;margin-top:4px}
+.topbar .actions{display:flex;gap:10px;align-items:center}
+button{font:500 14px Inter,ui-sans-serif,system-ui,sans-serif;border-radius:var(--r-ctl);border:1px solid var(--stroke);background:var(--glass);color:var(--ink);padding:10px 18px;cursor:pointer;backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));transition:transform var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease),background var(--dur-2) var(--ease),color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease)}
+button:hover{border-color:var(--stroke-hi);background:var(--glass-2);transform:translateY(-1px)}
+button:active{transform:scale(.98)}
+button.primary{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,var(--orb-b)));color:var(--accent-ink);border:0;font-weight:600;box-shadow:0 10px 28px color-mix(in srgb,var(--accent) 28%,transparent)}
+button.primary:hover{filter:brightness(1.06)}
+button.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0}
+button.icon-btn svg{display:block}
+.hero{text-align:center;max-width:760px;margin:0 auto 72px;animation:rise var(--dur-3) var(--ease) .06s both}
+.hero .kicker{color:var(--accent);font-size:13px;font-weight:600}
+.hero h1{font-size:clamp(38px,6vw,64px);line-height:1.04;margin:18px 0 0;letter-spacing:-.04em;font-weight:600}
+.hero p{color:var(--muted);margin:20px auto 0;max-width:56ch;font-size:17px}
+.hero .cta{display:flex;gap:12px;justify-content:center;margin-top:36px;flex-wrap:wrap}
+.features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;animation:rise var(--dur-3) var(--ease) .12s both}
+.feature{background:radial-gradient(60% 45% at 82% 0%,rgba(14,165,233,.10),transparent 60%),radial-gradient(55% 50% at 15% 100%,rgba(139,92,246,.12),transparent 65%),linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.03));backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);border:1px solid var(--stroke);border-radius:var(--r-card);padding:24px;box-shadow:var(--shadow-card),inset 0 1px 0 var(--stroke-hi);transition:transform var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease)}
+.feature:hover{transform:translateY(-3px);border-color:var(--stroke-hi)}
+.feature .ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--glass-2);border:1px solid var(--stroke);color:var(--accent);margin-bottom:16px}
+.feature h3{margin:0 0 6px;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.feature p{margin:0;color:var(--muted);font-size:13.5px}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse-dot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media(max-width:800px){.features{grid-template-columns:1fr}.topbar{margin-bottom:48px}}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.orb{animation:none}}
+</style></head><body>
+<div class="field" aria-hidden="true"><i class="orb orb-a"></i><i class="orb orb-b"></i><i class="orb orb-c"></i></div>
+<main class="shell">
+<header class="topbar">
+<div class="brand"><i></i>ZFTUNNEL<small>BY VELOCITY</small></div>
+<div class="actions">
+<button class="icon-btn" id="theme" onclick="toggleTheme()" aria-label="Toggle light/dark mode" title="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg></button>
+<button onclick="location.href='/dashboard/login'">Sign in</button>
+</div>
+</header>
+<section class="hero">
+<div class="kicker">Secure gateway · Xray core</div>
+<h1>Your private connection, under your control.</h1>
+<p>A self-hosted Xray gateway with a glass-clear command center. Generate profiles, scan QR codes, monitor traffic and connectivity — all on infrastructure you own.</p>
+<div class="cta">
+<button class="primary" onclick="location.href='/dashboard/login'">Open dashboard</button>
+<button onclick="location.href='/dashboard/login'">Sign in</button>
+</div>
+</section>
+<section class="features">
+<article class="feature"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></div><h3>Live runtime logs</h3><p>Stream the gateway process output in real time, right from the dashboard.</p></article>
+<article class="feature"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.03 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.08a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.08a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03z"/></svg></div><h3>One-click profiles</h3><p>VLESS, VMess, Trojan, Shadowsocks and XHTTP URIs with QR codes — ready to scan.</p></article>
+<article class="feature"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><h3>Live connectivity</h3><p>Latency checks to major platforms and real-time traffic counters, refreshed continuously.</p></article>
+</section>
+</main>
+<script>const savedTheme=localStorage.getItem('zftunnel-theme')||'dark';document.documentElement.dataset.theme=savedTheme;function toggleTheme(){const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;localStorage.setItem('zftunnel-theme',next);const t=document.querySelector('#theme');t.innerHTML=next==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}const t0=document.querySelector('#theme');t0.innerHTML=savedTheme==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'</script></body></html>`;
 const server = http.createServer(async (req, res) => {
   const requestPath = req.url.split('?')[0];
   if (requestPath === '/dashboard/login' && req.method === 'GET') { if (authenticated(req)) return res.writeHead(302, { location: '/dashboard' }).end(); return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(loginPage); }
@@ -419,7 +485,7 @@ const server = http.createServer(async (req, res) => {
   if (requestPath === '/api/logs' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, { logs: runtimeLogs }); }
   if (requestPath === '/api/network' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, await networkInformation(req)); }
   if (requestPath === '/api/traffic' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, traffic); }
-  if (requestPath === '/') return res.writeHead(302, { location: authenticated(req) ? '/dashboard' : '/dashboard/login' }).end();
+  if (requestPath === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(landingPage);
   if (requestPath === '/pass') { if (process.env.EXPOSE_PASS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(`UUID: ${gatewayConfig.uuid}\nVLESS_PATH: ${gatewayConfig.paths.vless}\nVMESS_PATH: ${gatewayConfig.paths.vmess}\nTROJAN_PATH: ${gatewayConfig.paths.trojan}\nSS_PATH: ${gatewayConfig.paths.ss}\n`); }
   if (requestPath === '/logs') { if (process.env.DEBUG_LOGS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(runtimeLogs.join('\n') || 'No runtime logs yet.'); }
   const targetPort = resolveTarget(requestPath);
