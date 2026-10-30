@@ -11,7 +11,16 @@ if (process.platform !== 'linux' || !['x64', 'arm64'].includes(process.arch)) {
 const asset = process.arch === 'arm64' ? 'Xray-linux-arm64-v8a.zip' : 'Xray-linux-64.zip';
 const destination = process.env.XRAY_BIN || path.join(__dirname, 'bin', 'xray');
 const archive = path.join('/tmp', `xray-${version}-${process.arch}.zip`);
-if (fs.existsSync(destination)) process.exit(0);
+if (fs.existsSync(destination)) {
+  try {
+    const probe = require('child_process').spawnSync(destination, ['version'], { encoding: 'utf8', timeout: 10000 });
+    const installed = (probe.stdout || '').split('\n')[0] || '';
+    if (installed.includes(version)) { console.log(`Xray ${version} already installed`); process.exit(0); }
+    console.log(`Existing Xray binary is ${installed.split(' ')[1] || 'unknown'}; updating to ${version}`);
+  } catch (error) {
+    console.log(`Existing binary check failed (${error.message}); reinstalling`);
+  }
+}
 fs.mkdirSync(path.dirname(destination), { recursive: true });
 
 function download(url, redirects = 0) {
@@ -27,7 +36,16 @@ function download(url, redirects = 0) {
 }
 
 (async () => {
-  await download(`https://github.com/XTLS/Xray-core/releases/download/v${version}/${asset}`);
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await download(`https://github.com/XTLS/Xray-core/releases/download/v${version}/${asset}`);
+      break;
+    } catch (error) {
+      if (attempt === 3) throw error;
+      console.log(`Download attempt ${attempt} failed (${error.message}); retrying…`);
+      await new Promise(resolve => setTimeout(resolve, 3000 * attempt));
+    }
+  }
   const zip = new AdmZip(archive);
   const entry = zip.getEntry('xray');
   if (!entry) throw new Error('Xray archive does not contain an xray binary');
