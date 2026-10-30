@@ -10,6 +10,19 @@ const QRCode = require('qrcode');
 
 const runtimeLogs = [];
 const traffic = { uploaded: 0, downloaded: 0, active: 0 };
+const speedSamples = [];
+let speedLastTotals = null;
+setInterval(() => {
+  const now = Date.now();
+  const totals = { uploaded: traffic.uploaded, downloaded: traffic.downloaded };
+  if (speedLastTotals) {
+    const up = Math.max(0, totals.uploaded - speedLastTotals.uploaded);
+    const down = Math.max(0, totals.downloaded - speedLastTotals.downloaded);
+    speedSamples.push({ t: now, up, down });
+    if (speedSamples.length > 30) speedSamples.shift();
+  }
+  speedLastTotals = totals;
+}, 1000).unref();
 const sessions = new Map();
 let networkCache = null;
 let networkCacheAt = 0;
@@ -375,8 +388,12 @@ div[id$="-modal"]>div{background:linear-gradient(160deg,rgba(255,255,255,.12),rg
 <section class="uri-grid" id="uris"></section>
 </section>
 </section>
+
 </main>
-<script>const savedTheme=localStorage.getItem('edgetunnel-theme')||'dark';document.documentElement.dataset.theme=savedTheme;function toggleTheme(){const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;localStorage.setItem('edgetunnel-theme',next);const t=document.querySelector('#theme');t.innerHTML=next==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}const t0=document.querySelector('#theme');t0.innerHTML=savedTheme==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+<script>
+
+
+const savedTheme=localStorage.getItem('edgetunnel-theme')||'dark';document.documentElement.dataset.theme=savedTheme;function toggleTheme(){const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;localStorage.setItem('edgetunnel-theme',next);const t=document.querySelector('#theme');t.innerHTML=next==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}const t0=document.querySelector('#theme');t0.innerHTML=savedTheme==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
 async function api(url, options){const r=await fetch(url,options);if(r.status===401){location='/dashboard/login';throw Error('login required')}const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}
 function show(data){const quote=value=>"'"+value.replaceAll("'","\\'")+"'";if(!document.querySelector('#uri-card-style')){const style=document.createElement('style');style.id='uri-card-style';style.textContent='.uri-grid{grid-template-columns:1fr!important}.protocol{display:grid;grid-template-columns:max-content minmax(0,1fr) auto;align-items:center;gap:12px 14px;padding:14px 16px!important;background:var(--surface)!important;border:1px solid var(--stroke)!important;border-radius:14px!important;box-shadow:0 1px 3px rgba(0,0,0,.08)!important;backdrop-filter:blur(14px) saturate(1.3)!important;-webkit-backdrop-filter:blur(14px) saturate(1.3)!important}.protocol h3{margin:0!important;color:var(--ink)!important;font:600 12px Inter,system-ui,sans-serif!important;letter-spacing:.02em!important}.protocol .uri{min-width:0;margin:0!important;padding:10px 12px!important;background:var(--surface-2)!important;border:1px solid var(--stroke)!important;border-radius:8px!important;color:var(--ink)!important;font:12px ui-monospace,monospace!important;white-space:normal;overflow-wrap:anywhere;word-break:break-all;line-height:1.6}.protocol>div:last-child{display:flex;justify-content:flex-end;gap:8px}.protocol .copy{width:auto!important;min-width:92px!important;padding:10px 14px!important;border:0!important;border-radius:8px!important;font-size:12px!important}.protocol .copy:first-child{background:linear-gradient(135deg,var(--accent),var(--accent))!important;color:var(--accent-ink)!important;box-shadow:0 3px 10px rgba(94,242,195,.25)}.protocol .copy:last-child{background:linear-gradient(135deg,var(--accent),var(--accent))!important;color:var(--accent-ink)!important;box-shadow:0 3px 10px rgba(94,242,195,.2)}.protocol .copy:hover{transform:translateY(-1px);filter:brightness(1.05)}[data-theme=dark] .protocol{background:var(--surface)!important;border-color:var(--stroke)!important}[data-theme=dark] .protocol h3{color:var(--accent)!important}[data-theme=dark] .protocol .uri{background:var(--surface)!important;border-color:var(--stroke)!important;color:var(--muted)!important}@media(max-width:800px){.protocol{grid-template-columns:1fr;gap:9px}.protocol>div:last-child{justify-content:flex-end}}';document.head.append(style)}const logsPanel=document.querySelector('.logs');if(logsPanel)logsPanel.remove();const actions=document.querySelector('.actions');if(actions&&!document.querySelector('#logs-button')){const button=document.createElement('button');button.id='logs-button';button.className='secondary icon-btn';button.setAttribute('aria-label','Runtime logs');button.title='Runtime logs';button.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 9 3 3-3 3M13 15h4"/></svg>';button.onclick=openLogs;actions.insertBefore(button,actions.lastElementChild)}document.querySelector('#uuid').value=data.uuid;for(const k of ['vless','vmess','trojan','ss'])document.querySelector('#'+k).value=data.paths[k];document.querySelector('#uris').innerHTML=Object.entries(data.uris).map(([k,v])=>'<article class="protocol"><h3>'+k.toUpperCase()+'</h3><div class="uri" title="'+v+'">'+v+'</div><div style="display:flex;justify-content:flex-end;gap:8px"><button class="secondary copy" style="flex:0 0 auto;width:auto" onclick="openQr('+quote(data.qr[k])+','+quote(k)+')">QR code</button><button class="secondary copy" style="flex:0 0 auto;width:auto" onclick="navigator.clipboard.writeText('+quote(v)+')">Copy URI</button></div></article>').join('')}
 function openLogs(){let modal=document.querySelector('#logs-modal');if(!modal){modal=document.createElement('div');modal.id='logs-modal';modal.style='position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:20px;background:rgba(6,12,16,.55)';modal.innerHTML='<div style="position:relative;width:min(900px,100%);padding:22px;background:var(--surface);border:1px solid var(--stroke);border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.6)"><button id="logs-close" style="position:absolute;right:12px;top:12px;width:auto;padding:6px 10px;background:var(--glass-2);color:var(--ink);border:1px solid var(--stroke);border-radius:7px">Close</button><h2 style="margin:0 0 14px;color:var(--accent);font-size:17px">Runtime logs</h2><pre id="logs" style="white-space:pre-wrap;max-height:65vh;min-height:240px;overflow:auto;background:var(--surface);border:1px solid var(--stroke);padding:14px;border-radius:10px;color:var(--accent);font:12px/1.7 ui-monospace,monospace">Loading...</pre></div>';document.body.append(modal);document.querySelector('#logs-close').onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove()}}modal.style.display='grid';api('/api/logs').then(data=>renderLogs(data.logs)).catch(()=>{});}
@@ -461,6 +478,20 @@ button.icon-btn svg{display:block}
 @keyframes pulse-dot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
 @media(max-width:800px){.features{grid-template-columns:1fr}.topbar{margin-bottom:48px}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.orb{animation:none}}
+
+.speed{background:radial-gradient(60% 45% at 82% 0%,rgba(14,165,233,.10),transparent 60%),radial-gradient(55% 50% at 15% 100%,rgba(139,92,246,.12),transparent 65%),linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.03));backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);border:1px solid var(--stroke);border-radius:var(--r-card);padding:24px;box-shadow:var(--shadow-card),inset 0 1px 0 var(--stroke-hi);animation:rise var(--dur-3) var(--ease) .18s both;transition:transform var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease);max-width:760px;margin:0 auto 72px}
+.speed:hover{transform:translateY(-3px);border-color:var(--stroke-hi)}
+.speed__head{display:flex;justify-content:space-between;align-items:start;gap:12px}
+.speed h2{font-size:18px;margin:0 0 4px;font-weight:600;letter-spacing:-.02em}
+.speed .muted{margin:0;font-size:13px}
+.speed__live{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-size:11px;font-weight:600;letter-spacing:.06em;border:1px solid var(--stroke);border-radius:var(--r-pill);padding:4px 10px;background:var(--glass)}
+.speed__live i{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse-dot 2s var(--ease) infinite}
+.speed__rates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0 4px}
+.speed__label{color:var(--muted);font-size:12px;margin:0 0 2px}
+.speed__value{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:0;font-variant-numeric:tabular-nums;white-space:nowrap}
+.speed__total{color:var(--muted);font-size:12px;margin:2px 0 0;font-variant-numeric:tabular-nums}
+.speed__chart{height:110px;margin-top:8px}
+.speed__chart svg{width:100%;height:100%;display:block}
 </style></head><body>
 <div class="field" aria-hidden="true"><i class="orb orb-a"></i><i class="orb orb-b"></i><i class="orb orb-c"></i></div>
 <main class="shell">
@@ -485,7 +516,52 @@ button.icon-btn svg{display:block}
 <article class="feature"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><h3>Live connectivity</h3><p>Latency checks to major platforms and real-time traffic counters, refreshed continuously.</p></article>
 </section>
 </main>
-<script>const savedTheme=localStorage.getItem('zftunnel-theme')||'dark';document.documentElement.dataset.theme=savedTheme;function toggleTheme(){const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;localStorage.setItem('zftunnel-theme',next);const t=document.querySelector('#theme');t.innerHTML=next==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}const t0=document.querySelector('#theme');t0.innerHTML=savedTheme==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'</script></body></html>`;
+<section class="speed">
+<div class="speed__head">
+<div>
+<h2>Network speed</h2>
+<p class="muted">Live gateway throughput, refreshed every second.</p>
+</div>
+<span class="speed__live"><i data-seenry-dot></i>LIVE</span>
+</div>
+<div class="speed__rates">
+<div>
+<p class="speed__label">Download</p>
+<p class="speed__value" id="speed-down">0 B/s</p>
+<p class="speed__total" id="speed-down-total">Total 0 B</p>
+</div>
+<div>
+<p class="speed__label">Upload</p>
+<p class="speed__value" id="speed-up">0 B/s</p>
+<p class="speed__total" id="speed-up-total">Total 0 B</p>
+</div>
+</div>
+<div class="speed__chart">
+<svg viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="Download / upload speed">
+<defs>
+<linearGradient id="speed-down-fill" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="var(--accent)" stop-opacity="0.35"/>
+<stop offset="1" stop-color="var(--accent)" stop-opacity="0.02"/>
+</linearGradient>
+</defs>
+<path id="speed-down-area" fill="url(#speed-down-fill)" d=""/>
+<path id="speed-down-line" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" d=""/>
+<path id="speed-up-line" fill="none" stroke="var(--orb-b)" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" d=""/>
+</svg>
+</div>
+</section>
+<script>
+
+
+function fmtSpeed(bps){if(!isFinite(bps)||bps<=0)return'0 B/s';const u=['B/s','KB/s','MB/s','GB/s','TB/s'];let v=bps,i=0;while(v>=1024&&i<u.length-1){v/=1024;i++}return v.toFixed(v>=100||i===0?0:1)+' '+u[i]}
+function fmtBytes(n){if(!isFinite(n)||n<=0)return'0 B';const u=['B','KB','MB','GB','TB'];let v=n,i=0;while(v>=1024&&i<u.length-1){v/=1024;i++}return v.toFixed(1)+' '+u[i]}
+const speedCap=30;let speedDown=[],speedUp=[];
+function speedPoints(series){const w=100,h=40,plot=h*0.7,max=Math.max(1,...series);const step=w/Math.max(1,series.length-1);return series.map((v,i)=>[i*step,h-(v/max)*plot])}
+function speedCurve(series){const p=speedPoints(series);if(p.length<2)return'';let d='M'+p[0][0]+','+p[0][1];for(let i=1;i<p.length-1;i++){const cx=p[i][0],cy=p[i][1],mx=(cx+p[i+1][0])/2,my=(cy+p[i+1][1])/2;d+=' Q'+cx+','+cy+' '+mx+','+my}const lx=p[p.length-1][0],ly=p[p.length-1][1];return d+' L'+lx+','+ly}
+function speedDraw(){const dl=speedCurve(speedDown),da=dl?dl+' L100,40 L0,40 Z':'',ul=speedCurve(speedUp);document.querySelector('#speed-down-line').setAttribute('d',dl);document.querySelector('#speed-down-area').setAttribute('d',da);document.querySelector('#speed-up-line').setAttribute('d',ul)}
+async function speedTick(){try{const d=await fetch('/api/speed').then(r=>r.json());if(!d||!d.samples)return;speedDown=d.samples.map(x=>x.down);speedUp=d.samples.map(x=>x.up);if(speedDown.length>speedCap){speedDown=speedDown.slice(-speedCap);speedUp=speedUp.slice(-speedCap)}document.querySelector('#speed-down').textContent=fmtSpeed(d.down);document.querySelector('#speed-up').textContent=fmtSpeed(d.up);document.querySelector('#speed-down-total').textContent='Total '+fmtBytes(d.downTotal);document.querySelector('#speed-up-total').textContent='Total '+fmtBytes(d.upTotal);speedDraw()}catch(e){}}
+setInterval(speedTick,1000);speedTick();
+const savedTheme=localStorage.getItem('zftunnel-theme')||'dark';document.documentElement.dataset.theme=savedTheme;function toggleTheme(){const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;localStorage.setItem('zftunnel-theme',next);const t=document.querySelector('#theme');t.innerHTML=next==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}const t0=document.querySelector('#theme');t0.innerHTML=savedTheme==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'</script></body></html>`;
 const server = http.createServer(async (req, res) => {
   const requestPath = req.url.split('?')[0];
   if (requestPath === '/dashboard/login' && req.method === 'GET') { if (authenticated(req)) return res.writeHead(302, { location: '/dashboard' }).end(); return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(loginPage); }
@@ -499,6 +575,7 @@ const server = http.createServer(async (req, res) => {
   if (requestPath === '/api/logs' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, { logs: runtimeLogs }); }
   if (requestPath === '/api/network' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, await networkInformation(req)); }
   if (requestPath === '/api/traffic' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, traffic); }
+  if (requestPath === '/api/speed' && req.method === 'GET') { if (!requireAuth(req, res)) return; return sendJson(res, 200, { samples: speedSamples, up: speedSamples.length ? speedSamples[speedSamples.length - 1].up : 0, down: speedSamples.length ? speedSamples[speedSamples.length - 1].down : 0, upTotal: traffic.uploaded, downTotal: traffic.downloaded }); }
   if (requestPath === '/') { const authed = authenticated(req); const page = landingPage.replaceAll('__AUTH_HREF__', authed ? '/dashboard' : '/dashboard/login').replaceAll('__AUTH_HERO__', authed ? 'Open dashboard' : 'Sign in'); return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(page); }
   if (requestPath === '/pass') { if (process.env.EXPOSE_PASS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(`UUID: ${gatewayConfig.uuid}\nVLESS_PATH: ${gatewayConfig.paths.vless}\nVMESS_PATH: ${gatewayConfig.paths.vmess}\nTROJAN_PATH: ${gatewayConfig.paths.trojan}\nSS_PATH: ${gatewayConfig.paths.ss}\n`); }
   if (requestPath === '/logs') { if (process.env.DEBUG_LOGS !== 'true') return res.writeHead(404).end('Not found'); return res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }).end(runtimeLogs.join('\n') || 'No runtime logs yet.'); }
