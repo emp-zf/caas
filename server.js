@@ -531,7 +531,7 @@ button.icon-btn svg{display:block}
 <section class="speed">
 <div class="speed__head">
 <div>
-<h2>Network speed</h2>
+<h2>ZFTunnel Traffic</h2>
 <p class="muted">Live gateway throughput, refreshed every second.</p>
 </div>
 <span class="speed__live"><i data-seenry-dot></i>LIVE</span>
