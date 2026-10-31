@@ -7,3 +7,9 @@ bin/
 skills-lock.json
 *.log
 npm-debug.log*
+
+# secrets — local only, never pushed
+.env
+.env.*
+!.env.example
+.seenry/

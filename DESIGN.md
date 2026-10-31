@@ -1,5 +1,11 @@
 # DESIGN.md — ZFTunnel by Velocity · Command center
 
+## Project rule: one design, all surfaces
+The landing page, dashboard, login and any future surface are **one design**, not siblings.
+The dashboard's Lens identity is the source of truth — same token system, same radii/shadows/
+type/motion, same light and dark themes. Landing styling that diverges from the dashboard is a
+bug, fixed toward the dashboard, never away from it.
+
 ## What this is
 The dashboard and login surface for the Xray gateway (`server.js`). Redesigned under the
 [seenry](.opencode/skills/seenry/SKILL.md) workflow with a **Lens** identity: deep layered
