@@ -24,6 +24,13 @@ setInterval(() => {
   speedLastTotals = totals;
 }, 1000).unref();
 const sessions = new Map();
+const loginAttempts = new Map();
+const LOGIN_MAX_ATTEMPTS = Number(process.env.LOGIN_MAX_ATTEMPTS || 3);
+const LOGIN_BAN_MS = (Number(process.env.LOGIN_BAN_MINUTES) || 15) * 60 * 1000;
+function clientIp(req) {
+  return (req.headers['cf-connecting-ip'] || (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown').slice(0, 64);
+}
+setInterval(() => { const now = Date.now(); for (const [ip, entry] of loginAttempts) { if (entry.bannedUntil && now > entry.bannedUntil) loginAttempts.delete(ip); if (!entry.bannedUntil && now - entry.firstAttempt > LOGIN_BAN_MS) loginAttempts.delete(ip); } }, 60000).unref();
 let networkCache = null;
 let networkCacheAt = 0;
 let networkInflight = null;
@@ -581,7 +588,26 @@ const server = http.createServer(async (req, res) => {
   const requestPath = req.url.split('?')[0];
   if (requestPath === '/dashboard/login' && req.method === 'GET') { if (authenticated(req)) return res.writeHead(302, { location: '/dashboard' }).end(); return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(loginPage); }
   if (requestPath === '/dashboard/login' && req.method === 'POST') {
-    let body = ''; req.on('data', chunk => { body += chunk; }); req.on('end', () => { const form = new URLSearchParams(body); if (!dashboardPassword || form.get('username') !== dashboardUser || form.get('password') !== dashboardPassword) return res.writeHead(401).end('Invalid credentials'); const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, { expires: Date.now() + 86400000 }); const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''; res.writeHead(302, { location: '/dashboard', 'set-cookie': `dashboard_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${secure}` }).end(); }); return;
+    const ip = clientIp(req);
+    const attempt = loginAttempts.get(ip);
+    if (attempt && attempt.bannedUntil && Date.now() < attempt.bannedUntil) {
+      const remaining = Math.ceil((attempt.bannedUntil - Date.now()) / 60000);
+      recordLog(`Login blocked for banned IP ${ip} (${remaining} min remaining)`);
+      return res.writeHead(429, { 'content-type': 'text/plain; charset=utf-8', 'retry-after': String(Math.ceil((attempt.bannedUntil - Date.now()) / 1000)) }).end(`Too many failed attempts. Try again in ${remaining} minute${remaining === 1 ? '' : 's'}.`);
+    }
+    let body = ''; req.on('data', chunk => { body += chunk; }); req.on('end', () => { const form = new URLSearchParams(body); if (!dashboardPassword || form.get('username') !== dashboardUser || form.get('password') !== dashboardPassword) {
+      const now = Date.now();
+      const current = loginAttempts.get(ip) || { failures: 0, firstAttempt: now };
+      current.failures += 1;
+      if (current.failures >= LOGIN_MAX_ATTEMPTS) {
+        current.bannedUntil = now + LOGIN_BAN_MS;
+        current.failures = 0;
+        recordLog(`Login brute-force detected: IP ${ip} banned for ${LOGIN_BAN_MS / 60000} minutes after ${LOGIN_MAX_ATTEMPTS} failed attempts`);
+        return res.writeHead(429, { 'content-type': 'text/plain; charset=utf-8', 'retry-after': String(LOGIN_BAN_MS / 1000) }).end(`Too many failed attempts. IP banned for ${LOGIN_BAN_MS / 60000} minutes.`);
+      }
+      loginAttempts.set(ip, current);
+      return res.writeHead(401).end('Invalid credentials');
+    } loginAttempts.delete(ip); const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, { expires: Date.now() + 86400000 }); const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''; res.writeHead(302, { location: '/dashboard', 'set-cookie': `dashboard_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${secure}` }).end(); }); return;
   }
   if (requestPath === '/dashboard' && req.method === 'GET') { if (!authenticated(req)) return res.writeHead(302, { location: '/dashboard/login' }).end(); const page = dashboardPage.replaceAll('EdgeTunnel', 'ZFTunnel by Velocity').replaceAll('EDGETUNNEL', 'ZFTUNNEL').replaceAll('edgetunnel-theme', 'zftunnel-theme'); return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(page); }
   if (requestPath === '/api/logout' && req.method === 'POST') { const token = (req.headers.cookie || '').match(/(?:^|;\s*)dashboard_session=([^;]+)/); if (token) sessions.delete(token[1]); return res.writeHead(204, { 'set-cookie': 'dashboard_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0' }).end(); }
