@@ -275,7 +275,7 @@ button:hover{filter:brightness(1.06);transform:translateY(-1px)}
 button:active{transform:scale(.98)}
 button.theme{position:absolute;right:20px;top:20px;width:38px;height:38px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;background:var(--glass);color:var(--ink);border:1px solid var(--stroke);border-radius:12px;backdrop-filter:blur(var(--blur));transition:border-color var(--dur-2) var(--ease),background var(--dur-2) var(--ease)}button.theme:hover{border-color:var(--stroke-hi);background:var(--glass-2)}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse-dot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes pulse-dot{0%{box-shadow:0 0 4px 0 color-mix(in srgb,var(--accent) 60%,transparent)}70%{box-shadow:0 0 14px 2px color-mix(in srgb,var(--accent) 35%,transparent)}100%{box-shadow:0 0 4px 0 color-mix(in srgb,var(--accent) 60%,transparent)}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.orb{animation:none}}
 </style></head><body>
 <div class="field" aria-hidden="true"><i class="orb orb-a"></i><i class="orb orb-b"></i><i class="orb orb-c"></i></div>
@@ -311,7 +311,7 @@ button.secondary{background:var(--glass);border:1px solid var(--stroke)}
 .hero .kicker{color:var(--accent);font-size:12px;font-weight:600}
 .online{display:flex;align-items:center;gap:8px;color:var(--ok);font-size:12px;white-space:nowrap;font-weight:500}
 .online:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px var(--ok);animation:pulse-dot 2s var(--ease) infinite}
-@keyframes pulse-dot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes pulse-dot{0%{box-shadow:0 0 4px 0 color-mix(in srgb,var(--ok) 60%,transparent)}70%{box-shadow:0 0 14px 2px color-mix(in srgb,var(--ok) 35%,transparent)}100%{box-shadow:0 0 4px 0 color-mix(in srgb,var(--ok) 60%,transparent)}}
 .layout{display:grid;grid-template-columns:minmax(280px,.72fr) minmax(0,1.28fr);gap:18px}
 .card{background:radial-gradient(60% 45% at 82% 0%,rgba(14,165,233,.10),transparent 60%),radial-gradient(55% 50% at 15% 100%,rgba(139,92,246,.12),transparent 65%),linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.03));backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);border:1px solid var(--stroke);border-radius:var(--r-card);padding:22px;box-shadow:var(--shadow-card),inset 0 1px 0 var(--stroke-hi);animation:rise var(--dur-3) var(--ease) both;transition:transform var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease)}
 .card:hover{transform:translateY(-2px);border-color:var(--stroke-hi)}
@@ -475,7 +475,7 @@ button.icon-btn svg{display:block}
 .feature h3{margin:0 0 6px;font-size:16px;font-weight:600;letter-spacing:-.01em}
 .feature p{margin:0;color:var(--muted);font-size:13.5px}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse-dot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes pulse-dot{0%{box-shadow:0 0 4px 0 color-mix(in srgb,var(--accent) 60%,transparent)}70%{box-shadow:0 0 14px 2px color-mix(in srgb,var(--accent) 35%,transparent)}100%{box-shadow:0 0 4px 0 color-mix(in srgb,var(--accent) 60%,transparent)}}
 @media(max-width:800px){.features{grid-template-columns:1fr}.topbar{margin-bottom:48px}.speed{margin-top:48px!important}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.orb{animation:none}}
 
