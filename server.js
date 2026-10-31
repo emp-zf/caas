@@ -89,14 +89,24 @@ function xrayConfig() {
     ['vmess', 23456, { clients: [{ id: gatewayConfig.uuid, alterId: 0 }] }],
     ['trojan', 25432, { clients: [{ password: gatewayConfig.uuid }] }],
     ['shadowsocks', 30300, { clients: [{ method: 'aes-128-gcm', password: gatewayConfig.uuid }] }],
-    ['vless', 14443, { decryption: 'none', clients: [{ id: gatewayConfig.uuid, email: gatewayConfig.uuid }] }, 'xhttp']
+    ['vless', 14443, { decryption: 'none', clients: [{ id: gatewayConfig.uuid, email: gatewayConfig.uuid }] }, 'xhttp'],
+    ['vless', 14021, { decryption: 'none', fallbacks: [], clients: [{ id: gatewayConfig.uuid, email: 'zhuofan-xhttp-obfs' }] }, {
+      network: 'xhttp', security: 'none', xhttpSettings: {
+        mode: 'auto', path: '/ecb6011c87', xPaddingBytes: '100-1000', scMaxBufferedPosts: 30, scStreamUpServerSecs: '20-80',
+        xPaddingObfsMode: true, xPaddingMethod: 'tokenish', xPaddingPlacement: 'cookie', xPaddingKey: 'bm_sv',
+        sessionIDPlacement: 'cookie', sessionIDKey: 'bm_uid', sessionIDTable: 'Base62', sessionIDLength: '12-20',
+        seqPlacement: 'header', seqKey: 'X-Request-Id'
+      }
+    }, 'VLESS-XHTTP-Obfs']
   ];
   return {
     log: { access: '', error: '', loglevel: process.env.XRAY_LOGLEVEL || 'warning' },
-    inbounds: inbounds.map(([protocol, inboundPort, settings, transport = protocol]) => ({
-      listen: '127.0.0.1', port: inboundPort, protocol, settings,
-      streamSettings: { ...(transport === 'xhttp' ? { network: 'xhttp', security: 'none', xhttpSettings: { path: gatewayConfig.paths.xhttp, mode: 'auto' } } : { network: 'ws', security: 'none', wsSettings: { path: gatewayConfig.paths[protocol === 'shadowsocks' ? 'ss' : transport] } }), sockopt: { trustedXForwardedFor: ['127.0.0.1'] } }
-    })),
+    inbounds: inbounds.map(([protocol, inboundPort, settings, streamSpec = protocol, tag]) => {
+      const streamSettings = typeof streamSpec === 'object'
+        ? { ...streamSpec }
+        : (streamSpec === 'xhttp' ? { network: 'xhttp', security: 'none', xhttpSettings: { path: gatewayConfig.paths.xhttp, mode: 'auto' } } : { network: 'ws', security: 'none', wsSettings: { path: gatewayConfig.paths[protocol === 'shadowsocks' ? 'ss' : streamSpec] } });
+      return { ...(tag ? { tag } : {}), listen: '127.0.0.1', port: inboundPort, protocol, settings, streamSettings: { ...streamSettings, sockopt: { trustedXForwardedFor: ['127.0.0.1'] } } };
+    }),
     outbounds: [{ protocol: 'freedom', settings: {} }, { protocol: 'blackhole', settings: {}, tag: 'blocked' }],
     routing: { rules: [{ type: 'field', ip: ['0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '169.254.0.0/16', '172.16.0.0/12', '192.0.0.0/24', '192.0.2.0/24', '192.168.0.0/16', '198.18.0.0/15', '198.51.100.0/24', '203.0.113.0/24', '::1/128', 'fc00::/7', 'fe80::/10'], outboundTag: 'blocked' }, { type: 'field', outboundTag: 'blocked', protocol: ['bittorrent'] }] }
   };
@@ -159,7 +169,8 @@ function buildUris(req) {
     vmess: `vmess://${vmess}`,
     trojan: `trojan://${gatewayConfig.uuid}@${host}:443?security=tls&type=ws&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.trojan)}#${encoded(label + ' Trojan')}`,
     ss: `ss://${Buffer.from(`aes-128-gcm:${gatewayConfig.uuid}`).toString('base64url')}@${host}:443/?plugin=v2ray-plugin%3Bmode%3Dwebsocket%3Bpath%3D${encoded(gatewayConfig.paths.ss)}%3Bhost%3D${encoded(host)}#${encoded(label + ' Shadowsocks')}`,
-    xhttp: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=xhttp&mode=auto&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.xhttp)}#${encoded(label + ' XHTTP')}`
+    xhttp: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=xhttp&mode=auto&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.xhttp)}#${encoded(label + ' XHTTP')}`,
+    xhttpObfs: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=xhttp&mode=auto&host=${encoded(host)}&path=${encoded('/ecb6011c87')}&xPaddingBytes=${encoded('100-1000')}&scMaxBufferedPosts=30&scStreamUpServerSecs=${encoded('20-80')}&xPaddingObfsMode=1&xPaddingMethod=tokenish&xPaddingPlacement=cookie&xPaddingKey=bm_sv&sessionIDPlacement=cookie&sessionIDKey=bm_uid&sessionIDTable=Base62&sessionIDLength=${encoded('12-20')}&seqPlacement=header&seqKey=X-Request-Id#${encoded(label + ' XHTTP-Obfs')}`
   };
 }
 
@@ -226,7 +237,7 @@ async function refreshNetworkData(req) {
     xray: xray ? 'online' : 'offline',
     uptime: Math.floor(process.uptime()),
     runtime: `Node ${process.version} · ${process.platform}/${process.arch}`,
-    inbounds: { vless: 14016, vmess: 23456, trojan: 25432, shadowsocks: 30300, xhttp: 14443 },
+    inbounds: { vless: 14016, vmess: 23456, trojan: 25432, shadowsocks: 30300, xhttp: 14443, xhttpObfs: 14021 },
     interfaces: Object.keys(os.networkInterfaces()).filter(name => name !== 'lo'),
     publicIp: ipResult.ip || 'unavailable',
     location: trace.loc || 'unknown',
