@@ -34,7 +34,7 @@ const xhttpObfsPath = '/ecb6011c87';
 const configuredConfigFile = process.env.GATEWAY_CONFIG_FILE || path.join(__dirname, 'data', 'gateway-config.json');
 const fallbackConfigFile = path.join('/tmp', 'zftunnel-config.json');
 let configFile = configuredConfigFile;
-const dashboardUser = process.env.DASHBOARD_USERNAME || 'admin';
+const dashboardUser = process.env.DASHBOARD_USERNAME;
 const dashboardPassword = process.env.DASHBOARD_PASSWORD;
 
 function recordLog(message) {
