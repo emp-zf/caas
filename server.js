@@ -30,6 +30,7 @@ let networkInflight = null;
 const NETWORK_CACHE_TTL_MS = 30000;
 const port = Number(process.env.PORT || 3000);
 const defaultUuid = '769c35e2-2cad-44db-8df3-784b2d634079';
+const xhttpObfsPath = '/ecb6011c87';
 const configuredConfigFile = process.env.GATEWAY_CONFIG_FILE || path.join(__dirname, 'data', 'gateway-config.json');
 const fallbackConfigFile = path.join('/tmp', 'zftunnel-config.json');
 let configFile = configuredConfigFile;
@@ -92,7 +93,7 @@ function xrayConfig() {
     ['vless', 14443, { decryption: 'none', clients: [{ id: gatewayConfig.uuid, email: gatewayConfig.uuid }] }, 'xhttp'],
     ['vless', 14021, { decryption: 'none', fallbacks: [], clients: [{ id: gatewayConfig.uuid, email: 'zhuofan-xhttp-obfs' }] }, {
       network: 'xhttp', security: 'none', xhttpSettings: {
-        mode: 'auto', path: '/ecb6011c87', xPaddingBytes: '100-1000', scMaxBufferedPosts: 30, scStreamUpServerSecs: '20-80',
+        mode: 'auto', path: xhttpObfsPath, xPaddingBytes: '100-1000', scMaxBufferedPosts: 30, scStreamUpServerSecs: '20-80',
         xPaddingObfsMode: true, xPaddingMethod: 'tokenish', xPaddingPlacement: 'cookie', xPaddingKey: 'bm_sv',
         sessionIDPlacement: 'cookie', sessionIDKey: 'bm_uid', sessionIDTable: 'Base62', sessionIDLength: '12-20',
         seqPlacement: 'header', seqKey: 'X-Request-Id'
@@ -170,7 +171,7 @@ function buildUris(req) {
     trojan: `trojan://${gatewayConfig.uuid}@${host}:443?security=tls&type=ws&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.trojan)}#${encoded(label + ' Trojan')}`,
     ss: `ss://${Buffer.from(`aes-128-gcm:${gatewayConfig.uuid}`).toString('base64url')}@${host}:443/?plugin=v2ray-plugin%3Bmode%3Dwebsocket%3Bpath%3D${encoded(gatewayConfig.paths.ss)}%3Bhost%3D${encoded(host)}#${encoded(label + ' Shadowsocks')}`,
     xhttp: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=xhttp&mode=auto&host=${encoded(host)}&path=${encoded(gatewayConfig.paths.xhttp)}#${encoded(label + ' XHTTP')}`,
-    xhttpObfs: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=xhttp&mode=auto&host=${encoded(host)}&path=${encoded('/ecb6011c87')}&xPaddingBytes=${encoded('100-1000')}&scMaxBufferedPosts=30&scStreamUpServerSecs=${encoded('20-80')}&xPaddingObfsMode=1&xPaddingMethod=tokenish&xPaddingPlacement=cookie&xPaddingKey=bm_sv&sessionIDPlacement=cookie&sessionIDKey=bm_uid&sessionIDTable=Base62&sessionIDLength=${encoded('12-20')}&seqPlacement=header&seqKey=X-Request-Id#${encoded(label + ' XHTTP-Obfs')}`
+    xhttpObfs: `vless://${gatewayConfig.uuid}@${host}:443?encryption=none&security=tls&type=xhttp&mode=auto&host=${encoded(host)}&path=${encoded(xhttpObfsPath)}&xPaddingBytes=${encoded('100-1000')}&scMaxBufferedPosts=30&scStreamUpServerSecs=${encoded('20-80')}&xPaddingObfsMode=1&xPaddingMethod=tokenish&xPaddingPlacement=cookie&xPaddingKey=bm_sv&sessionIDPlacement=cookie&sessionIDKey=bm_uid&sessionIDTable=Base62&sessionIDLength=${encoded('12-20')}&seqPlacement=header&seqKey=X-Request-Id#${encoded(label + ' XHTTP-Obfs')}`
   };
 }
 
@@ -432,12 +433,13 @@ async function refreshTraffic(){try{const data=await api('/api/traffic');const f
 function syncModalTheme(){const dark=document.documentElement.dataset.theme==='dark';document.documentElement.style.colorScheme=dark?'dark':'light';const surface=dark?'var(--surface)':'var(--surface)';const border=dark?'var(--stroke)':'var(--stroke)';const text=dark?'var(--ink)':'var(--ink)';for(const id of ['config-modal','logs-modal','qr-modal']){const modal=document.querySelector('#'+id);if(!modal)continue;const panel=modal.firstElementChild;if(panel){panel.style.background=surface;panel.style.borderColor=border;panel.style.color=text;panel.querySelectorAll('h2').forEach(item=>item.style.color=dark?'var(--accent)':'var(--ink)');panel.querySelectorAll('button').forEach(item=>{if(item.id.endsWith('close')){item.style.background=dark?'var(--glass-2)':'var(--glass-2)';item.style.color=dark?'var(--ink)':'var(--ink)';item.style.borderColor=border}})}}}
 setInterval(()=>{ensureNetworkTests();ensureTrafficCounter();refreshNetwork().then(syncNetworkSummaryTheme);renderNetworkTests();renderEdgeNetworkCards();refreshTraffic()},30000);setInterval(refreshTraffic,3000);setInterval(addNetworkFlags,1000);setTimeout(()=>{ensureNetworkTests();ensureTrafficCounter();renderEdgeNetworkCards();syncNetworkSummaryTheme();syncModalTheme();addNetworkFlags()},1000);new MutationObserver(()=>{syncNetworkTheme();syncNetworkSummaryTheme();syncModalTheme()}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});new MutationObserver(()=>{syncModalTheme();addNetworkFlags()}).observe(document.body,{childList:true,subtree:true});</script></body></html>`;
 function targets() {
-  return { [gatewayConfig.paths.vless]: 14016, [gatewayConfig.paths.vmess]: 23456, [gatewayConfig.paths.trojan]: 25432, [gatewayConfig.paths.ss]: 30300, [gatewayConfig.paths.xhttp]: 14443 };
+  return { [gatewayConfig.paths.vless]: 14016, [gatewayConfig.paths.vmess]: 23456, [gatewayConfig.paths.trojan]: 25432, [gatewayConfig.paths.ss]: 30300, [gatewayConfig.paths.xhttp]: 14443, [xhttpObfsPath]: 14021 };
 }
 function resolveTarget(requestPath) {
   const routeMap = targets();
   if (routeMap[requestPath]) return routeMap[requestPath];
   if (requestPath.startsWith(`${gatewayConfig.paths.xhttp}/`)) return routeMap[gatewayConfig.paths.xhttp];
+  if (requestPath.startsWith(`${xhttpObfsPath}/`)) return routeMap[xhttpObfsPath];
   return undefined;
 }
 function forwardHttp(req, res, targetPort) {
